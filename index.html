@@ -22,6 +22,7 @@ button{font:inherit;border:0;border-radius:10px;padding:8px 12px;background:var(
 .count{position:sticky;box-shadow:0 2px 4px #0000000d;top:0;z-index:5;background:var(--bg);padding:8px 4px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
 .muted{color:var(--muted);font-size:.85rem}
 </style></head><body>
+<div style="font-size:.8rem;padding:4px 8px;background:#eef;display:flex;gap:8px;align-items:center"><span id="syncstat">Sync: …</span><button onclick="syncSetup()" style="font-size:.75rem">Set up / share sync</button><span class="muted">Picks, days, checks &amp; out-nights reset every Sunday 12:00 AM</span></div>
 <header><h1>🍲 Crock Pot Dinner Planner</h1><p>Family of 4 · Beaver Dam, WI · Aldi shopping · 15–20 min hands-on</p></header>
 <main>
 <div class="count"><span id="cnt">0 / 7 dinners picked</span><button class="alt" onclick="resetAll()">Reset week</button></div>
@@ -63,33 +64,98 @@ const PRICES={
 "cumin & chili powder":[0,1],"soy sauce (low sodium)":[0,1],"flour or cornstarch":[0,1]
 };
 const fmtP=k=>{const p=PRICES[k];if(!p)return'<span title="No price yet">TBD</span>';if(p[0]===0)return"at home";return(p[1]?"":"~")+"$"+p[0].toFixed(2)};
-let S=JSON.parse(localStorage.getItem("cpPlan")||"null")||{sel:[],days:{},chk:{}};S.out=S.out||{};
-let EO=JSON.parse(localStorage.getItem("cpEatOut")||"[]");
-const save=()=>localStorage.setItem("cpPlan",JSON.stringify(S));
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function toggle(id){const i=S.sel.indexOf(id);if(i>=0){S.sel.splice(i,1);delete S.days[id]}else{if(S.sel.length>=7){alert("You can pick up to 7 dinners.");return}S.sel.push(id)}save();render()}
+function toggle(id){if(S.sel.includes(id)){setF('days/'+id,null);setF('sel/'+id,null)}else{if(S.sel.length>=7){alert("You can pick up to 7 dinners.");return}setF('sel/'+id,Date.now())}render()}
 function renderMeals(){document.getElementById("meals").innerHTML=M.map(m=>{const s=S.sel.includes(m.id);return`<div class="box meal ${s?"sel":""}" onclick="toggle('${m.id}')"><span class="check">${s?"✓ Picked":"+ Pick"}</span><h3>${m.n}</h3><span class="tag g">⏱ ${m.t} min hands-on</span>${m.tags.map(t=>`<span class="tag">${t}</span>`).join("")}<ul>${m.ing.map(i=>`<li>${esc(i[0])} — <span class="muted">${esc(i[1])}</span></li>`).join("")}</ul><details onclick="event.stopPropagation()"><summary>Crock pot steps</summary><ol>${m.st.map(x=>`<li>${x}</li>`).join("")}</ol></details></div>`}).join("")}
 function renderDays(){document.getElementById("outdays").innerHTML=DAYS.map(d=>`<label style="font-size:.88rem"><input type="checkbox" ${S.out[d]?"checked":""} onchange="setOut('${d}',this.checked)"> ${d.slice(0,3)}</label>`).join("");const el=document.getElementById("days");if(!S.sel.length){el.innerHTML='<p class="muted">Pick meals first.</p>';return}
-el.innerHTML=S.sel.map(id=>{const m=M.find(x=>x.id==id);const off=S.days[id]&&S.out[S.days[id]];return`<div class="dayrow"><span>${m.n}${off?' <span class="carry" style="background:#f6dccd;color:#8a3b1c">eating out — skipped</span>':''}</span><select onchange="S.days['${id}']=this.value;save();renderDays();renderList()"><option value="">Day…</option>${DAYS.map(d=>`<option ${S.days[id]==d?"selected":""}>${d}</option>`).join("")}</select></div>`}).join("")}
+el.innerHTML=S.sel.map(id=>{const m=M.find(x=>x.id==id);const off=S.days[id]&&S.out[S.days[id]];return`<div class="dayrow"><span>${m.n}${off?' <span class="carry" style="background:#f6dccd;color:#8a3b1c">eating out — skipped</span>':''}</span><select onchange="setF('days/${id}',this.value||null);renderDays();renderList()"><option value="">Day…</option>${DAYS.map(d=>`<option ${S.days[id]==d?"selected":""}>${d}</option>`).join("")}</select></div>`}).join("")}
 function renderList(){const map={};S.sel.filter(id=>!(S.days[id]&&S.out[S.days[id]])).forEach(id=>{const m=M.find(x=>x.id==id);m.ing.forEach(([k,a,c])=>{if(c=="Leftover")return;(map[k]=map[k]||{c,uses:[]}).uses.push({m:m.n,a})})});
 const keys=Object.keys(map);document.getElementById("nitems").textContent=keys.length;updBudget(keys);
 const el=document.getElementById("list");if(!keys.length){el.innerHTML='<p class="muted">Pick some meals to build your list.</p>';return}
 let h="";CATS.forEach(c=>{const ks=keys.filter(k=>map[k].c==c).sort();if(!ks.length)return;h+=`<div class="cat">${c}</div>`;
-ks.forEach(k=>{const u=map[k].uses,d=S.chk[k];h+=`<label class="item ${d?"done":""}"><input type="checkbox" ${d?"checked":""} onchange="S.chk['${k}']=this.checked;save();renderList()"><div><span class="nm">${esc(k)}</span>${u.length>1?`<span class="carry">🌱 carries over ×${u.length}</span>`:""}<div class="sub">${u.map(x=>`${esc(x.a)} (${esc(x.m)})`).join(" · ")}</div></div><span class="price">${fmtP(k)}</span></label>`})});el.innerHTML=h}
+ks.forEach(k=>{const u=map[k].uses,d=S.chk[k];h+=`<label class="item ${d?"done":""}"><input type="checkbox" ${d?"checked":""} onchange="setF('chk/'+decodeURIComponent('${encodeURIComponent(k)}'),this.checked||null);renderList()"><div><span class="nm">${esc(k)}</span>${u.length>1?`<span class="carry">🌱 carries over ×${u.length}</span>`:""}<div class="sub">${u.map(x=>`${esc(x.a)} (${esc(x.m)})`).join(" · ")}</div></div><span class="price">${fmtP(k)}</span></label>`})});el.innerHTML=h}
 function updBudget(keys){const est=document.getElementById("est"),n=document.getElementById("bnote");if(!keys.length){est.textContent="$0.00";n.textContent="Pick meals to see an estimate.";return}
 let t=0,anyEst=false;const tbd=[];keys.forEach(k=>{const p=PRICES[k];if(!p)tbd.push(k);else{t+=p[0];if(p[0]&&!p[1])anyEst=true}});
 est.textContent=(anyEst?"~":"")+"$"+t.toFixed(2);const d=100-t;
 n.innerHTML=`Sum of priced items for your picked meals: ${anyEst?"~":""}$${t.toFixed(2)} vs ~$100 budget (${d>=0?"$"+d.toFixed(2)+" under":"$"+(-d).toFixed(2)+" over"}).`+(tbd.length?` <b>${tbd.length} item${tbd.length>1?"s":""} still TBD, not included:</b> ${tbd.map(esc).join(", ")}.`:" All items priced.")+" Spices, soy sauce, and flour/cornstarch are assumed to be at home."}
-function setOut(d,v){if(v)S.out[d]=true;else delete S.out[d];save();renderDays();renderList()}
+function setOut(d,v){setF('out/'+d,v||null);renderDays();renderList()}
 const iso=x=>{const z=new Date(x.getTime()-x.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
 function renderEO(){const now=new Date(),ym=iso(now).slice(0,7),ws=new Date(now);ws.setHours(0,0,0,0);ws.setDate(ws.getDate()-ws.getDay());const we=new Date(ws);we.setDate(we.getDate()+7);
 const inW=e=>{const d=new Date(e.d+"T12:00");return d>=ws&&d<we},mo=EO.filter(e=>e.d.slice(0,7)==ym);
 eoW.textContent=EO.filter(inW).length;eoM.textContent=mo.length;const sp=mo.filter(e=>e.a!=null);eoS.textContent=sp.length?"$"+sp.reduce((t,e)=>t+e.a,0).toFixed(2):"—";
 const pl=Object.keys(S.out).length;eoH.innerHTML=(pl?`Planned out this week: ${pl} night${pl>1?"s":""} (${DAYS.filter(d=>S.out[d]).map(d=>d.slice(0,3)).join(", ")}). `:"")+(EO.length?"<b>History:</b><br>"+EO.slice().reverse().map(e=>`${e.d}${e.p?" · "+esc(e.p):""}${e.a!=null?" · $"+e.a.toFixed(2):""}`).join("<br>"):"No meals out logged yet.");if(!eoD.value)eoD.value=iso(now)}
-function logOut(){const d=eoD.value||iso(new Date()),p=eoP.value.trim(),a=parseFloat(eoA.value);EO.push({d,p:p||null,a:isNaN(a)?null:Math.round(a*100)/100});localStorage.setItem("cpEatOut",JSON.stringify(EO));eoP.value="";eoA.value="";renderEO()}
-function undoOut(){if(!EO.length)return;EO.pop();localStorage.setItem("cpEatOut",JSON.stringify(EO));renderEO()}
+function logOut(){const d=eoD.value||iso(new Date()),p=eoP.value.trim(),a=parseFloat(eoA.value);setEO(uid(),{d,p:p||null,a:isNaN(a)?null:Math.round(a*100)/100,t:Date.now()});eoP.value="";eoA.value="";renderEO()}
+function undoOut(){const ids=Object.keys(R.eo).filter(k=>R.eo[k]&&!R.eo[k].del).sort((a,b)=>R.eo[a].t-R.eo[b].t);if(!ids.length)return;const k=ids[ids.length-1];setEO(k,{...R.eo[k],del:true,t:Date.now()});renderEO()}
 function render(){document.getElementById("cnt").textContent=S.sel.length+" / 7 dinners picked";renderMeals();renderDays();renderList();renderEO()}
-function clearChecks(){S.chk={};save();renderList()}
-function resetAll(){if(confirm("Clear this week's picks and list?")){S={sel:[],days:{},chk:{},out:{}};save();render()}}
-render();
+function clearChecks(){Object.keys(S.chk).forEach(k=>setF('chk/'+k,null));renderList()}
+function resetAll(){if(confirm("Clear this week's picks and list?")){['sel','days','chk','out'].forEach(g=>{const o=g=='sel'?Object.fromEntries(S.sel.map(x=>[x,1])):S[g];Object.keys(o).forEach(k=>setF(g+'/'+k,null))});render()}}
+/* ================= SYNC CONFIG (edit me) =================
+   Firebase Realtime Database URL from the Firebase console
+   (Build > Realtime Database > Data tab, the URL at top).
+   This URL is a public client endpoint, NOT a secret; access is controlled
+   by the database rules + the unguessable household key below.
+   Leave "" to run local-only (no sync). */
+const SYNC_DB_URL = "https://meal-plan-6b9af-default-rtdb.firebaseio.com";   // e.g. "https://meal-plan-xxxxx-default-rtdb.firebaseio.com"
+/* ========================================================== */
+const DAY_MS=864e5;
+const weekId=(now=new Date())=>{const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-d.getDay());return iso(d)}; // Sunday 00:00 local
+const fk=s=>encodeURIComponent(s).replace(/\./g,"%2E");          // Firebase-safe key
+const ufk=s=>decodeURIComponent(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function newHouseKey(){const a=new Uint8Array(18);crypto.getRandomValues(a);return Array.from(a,b=>b.toString(16).padStart(2,"0")).join("")}
+// household key: from link #h=..., else stored
+(function(){const m=location.hash.match(/h=([A-Za-z0-9_-]{24,})/);if(m){localStorage.setItem("cpHouse",m[1]);history.replaceState(null,"",location.pathname+location.search)}})();
+let HK=localStorage.getItem("cpHouse")||"";
+// R = raw synced state: {w:{<weekId>:{<field>:{v,t}}}, eo:{<uid>:{d,p,a,t,del}}}
+let R=JSON.parse(localStorage.getItem("cpSync")||"null");
+if(!R){R={w:{},eo:{}};/* migrate old local data once */const o=JSON.parse(localStorage.getItem("cpPlan")||"null"),t0=1,wk=weekId(),f={};
+ if(o){(o.sel||[]).forEach((id,i)=>f[fk("sel/"+id)]={v:i+1,t:t0});Object.entries(o.days||{}).forEach(([k,v])=>f[fk("days/"+k)]={v,t:t0});Object.entries(o.out||{}).forEach(([k,v])=>v&&(f[fk("out/"+k)]={v:true,t:t0}));Object.entries(o.chk||{}).forEach(([k,v])=>v&&(f[fk("chk/"+k)]={v:true,t:t0}))}
+ R.w[wk]=f;JSON.parse(localStorage.getItem("cpEatOut")||"[]").forEach((e,i)=>R.eo["m"+i]={...e,t:t0+i});}
+let S,EO,WK;
+function derive(){WK=weekId();const f=(R.w&&R.w[WK])||{};S={sel:[],days:{},chk:{},out:{}};const sel=[];
+ for(const[k,x]of Object.entries(f)){if(x==null||x.v==null||x.v===false||x.v==="")continue;const p=ufk(k),i=p.indexOf("/"),g=p.slice(0,i),n=p.slice(i+1);
+  if(g=="sel")sel.push([n,x.v]);else if(S[g])S[g][n]=x.v}
+ S.sel=sel.sort((a,b)=>a[1]-b[1]).map(a=>a[0]).filter(id=>M.some(m=>m.id==id));
+ EO=Object.values(R.eo||{}).filter(e=>e&&!e.del).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.t-b.t)}
+function persist(){for(const w in R.w)if(w!=weekId())delete R.w[w]; /* weekly reset: drop old weeks (eo kept) */
+ localStorage.setItem("cpSync",JSON.stringify(R))}
+// set one weekly field (last-write-wins by timestamp)
+function setF(path,v){const k=fk(path),x={v:v===undefined?null:v,t:Date.now()};(R.w[WK]=R.w[WK]||{})[k]=x;persist();derive();push({["w/"+WK+"/"+k]:x})}
+function setEO(id,e){R.eo[id]=e;persist();derive();push({["eo/"+id]:e})}
+const save=()=>{}; // legacy no-op
+/* ---------- network (Firebase REST + EventSource streaming, no SDK) ---------- */
+let pend=JSON.parse(localStorage.getItem("cpPend")||"{}"),online=false,es=null;
+const base=()=>SYNC_DB_URL.replace(/\/$/,"")+"/h/"+HK;
+function push(patch){Object.assign(pend,patch);localStorage.setItem("cpPend",JSON.stringify(pend));flush()}
+async function flush(){if(!SYNC_DB_URL||!HK||!online||!Object.keys(pend).length)return;const body=pend;pend={};localStorage.setItem("cpPend","{}");
+ try{const r=await fetch(base()+".json",{method:"PATCH",body:JSON.stringify(body)});if(!r.ok)throw r.status}catch(e){pend={...body,...pend};localStorage.setItem("cpPend",JSON.stringify(pend));setStat("offline – will retry")}}
+const newer=(a,b)=>!a||(b&&(b.t||0)>(a.t||0));
+function mergeRemote(rem){if(!rem)return;let ch=false,back={};
+ for(const[w,f]of Object.entries(rem.w||{})){if(w!=weekId()){if(w<weekId())back["w/"+w]=null;continue}const L=R.w[w]=R.w[w]||{};
+  for(const[k,x]of Object.entries(f||{})){if(newer(L[k],x)){L[k]=x;ch=true}}
+  for(const[k,x]of Object.entries(L))if(newer((f||{})[k],x))back["w/"+w+"/"+k]=x}
+ for(const[k,x]of Object.entries(rem.eo||{})){if(newer(R.eo[k],x)){R.eo[k]=x;ch=true}}
+ for(const[k,x]of Object.entries(R.eo))if(newer((rem.eo||{})[k],x))back["eo/"+k]=x;
+ if(!rem.w||!rem.w[weekId()])for(const[k,x]of Object.entries(R.w[weekId()]||{}))back["w/"+weekId()+"/"+k]=x;
+ if(ch){persist();derive();render()}if(Object.keys(back).length)push(back)}
+let mirror={};
+function applyEvt(path,data,patch){const parts=path.split("/").filter(Boolean);if(!parts.length){mirror=patch?{...mirror,...data}:(data||{})}else{let o=mirror;for(let i=0;i<parts.length-1;i++)o=o[parts[i]]=o[parts[i]]||{};const last=parts[parts.length-1];
+ if(patch){o[last]=o[last]||{};Object.assign(o[last],data)}else o[last]=data}mergeRemote(mirror)}
+function connect(){if(es){es.close();es=null}online=false;if(!SYNC_DB_URL||!HK){setStat(SYNC_DB_URL?"not linked – tap Set up sync":"local only");return}
+ setStat("connecting…");es=new EventSource(base()+".json");
+ es.addEventListener("put",e=>{const m=JSON.parse(e.data);online=true;setStat("synced ✓");applyEvt(m.path,m.data,false);flush()});
+ es.addEventListener("patch",e=>{const m=JSON.parse(e.data);applyEvt(m.path,m.data,true)});
+ es.addEventListener("cancel",()=>setStat("access denied – check rules/key"));
+ es.onerror=()=>{online=false;setStat("offline – changes saved on this phone")}}
+function setStat(s){const el=document.getElementById("syncstat");if(el)el.textContent="Sync: "+s}
+function shareLink(){return location.origin+location.pathname+"#h="+HK}
+function syncSetup(){if(!HK){if(!confirm("Create a new household sync key on this phone? (Your partner should then open the share link instead of doing this.)"))return;HK=newHouseKey();localStorage.setItem("cpHouse",HK);connect()}
+ const l=shareLink();prompt("Send this private link to your partner (anyone with it can edit the plan):",l);navigator.clipboard&&navigator.clipboard.writeText(l).catch(()=>{})}
+// weekly rollover check (Sunday 00:00 local)
+let lastWk=weekId();function tick(){if(weekId()!=lastWk){lastWk=weekId();persist();derive();render()}}
+setInterval(tick,30000);document.addEventListener("visibilitychange",()=>{if(!document.hidden){tick();if(!online)connect()}});
+window.addEventListener("online",connect);
+derive();
+
+render();connect();
 </script></body></html>
