@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Crock Pot Dinner Planner</title>
+<title>Family Meal Planner</title>
 <style>
 :root{--bg:#fbf6ef;--card:#fff;--ink:#3b2f2a;--muted:#8a7a70;--acc:#c8643b;--acc2:#6b8f5e;--line:#eadfd3}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
@@ -21,21 +21,29 @@ select{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);b
 button{font:inherit;border:0;border-radius:10px;padding:8px 12px;background:var(--acc);color:#fff;cursor:pointer}button.alt{background:#efe4d8;color:var(--ink)}
 .count{position:sticky;box-shadow:0 2px 4px #0000000d;top:0;z-index:5;background:var(--bg);padding:8px 4px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
 .muted{color:var(--muted);font-size:.85rem}
+.tabs{display:flex;gap:6px;margin:10px 4px}.tabs button{flex:1;background:#efe4d8;color:var(--ink)}.tabs button.on{background:var(--acc);color:#fff}
+.ctl{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:.85rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{border:1px solid var(--line);background:#fff;color:var(--ink);padding:3px 8px;border-radius:99px;font-size:.8rem}.chip.on{background:var(--acc2);color:#fff;border-color:var(--acc2)}
+.warn{background:#fff3d6;border-radius:10px;padding:8px;font-size:.85rem;margin:6px 0}.tabtag{font-size:.68rem;background:#efe4d8;border-radius:99px;padding:0 6px;margin-left:3px}
 </style></head><body>
-<div style="font-size:.8rem;padding:4px 8px;background:#eef;display:flex;gap:8px;align-items:center"><span id="syncstat">Sync: …</span><button onclick="syncSetup()" style="font-size:.75rem">Set up / share sync</button><span class="muted">Picks, days, checks &amp; out-nights reset every Sunday 12:00 AM</span></div>
-<header><h1>🍲 Crock Pot Dinner Planner</h1><p>Family of 4 · Beaver Dam, WI · Aldi shopping · 15–20 min hands-on</p></header>
+<div style="font-size:.8rem;padding:4px 8px;background:#eef;display:flex;gap:8px;align-items:center"><span id="syncstat">Sync: …</span><button onclick="syncSetup()" style="font-size:.75rem">Set up / share sync</button><span class="muted">All picks (breakfast, lunch, dinner), days, checks &amp; out-nights reset every Sunday 12:00 AM</span></div>
+<header><h1>🍲 Family Meal Planner</h1><p>Family of 4 · Beaver Dam, WI · Aldi shopping · crock pot dinners + 5–10 min breakfasts &amp; lunches</p></header>
 <main>
 <div class="count"><span id="cnt">0 / 7 dinners picked</span><button class="alt" onclick="resetAll()">Reset week</button></div>
+<div class="tabs" id="tabs"><button data-t="b" onclick="setTab('b')">🥣 Breakfast</button><button data-t="l" onclick="setTab('l')">🥪 Lunch</button><button data-t="d" onclick="setTab('d')">🍲 Dinner</button></div>
+<div id="tab-b" class="tabp"><h2>1. Pick breakfasts</h2><p class="muted">5–10 min, kid-friendly, no crock pot. Tap to pick; then choose days or “Most days” (=5) and a servings multiplier (1× = all 4 of you).</p><div class="grid" id="bmeals"></div></div>
+<div id="tab-l" class="tabp"><h2>1. Pick lunches</h2><p class="muted">5–10 min, reuse dinner leftovers &amp; shared ingredients. Tap to pick; choose days or “Most days” (=5) and a servings multiplier.</p><div class="grid" id="lmeals"></div></div>
+<div id="tab-d" class="tabp">
 <h2>1. Pick this week's dinners</h2><p class="muted">Tap a card to select (up to 7). Tap again to remove.</p>
 <div class="grid" id="meals"></div>
-<h2>2. Assign to days</h2><div class="box"><div class="muted" style="margin-bottom:6px">🍽️ Eating out (no crock pot dinner needed that night; a meal assigned to that day drops off the list and total):</div><div id="outdays" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px"></div><div id="days"></div></div>
+<h2>2. Assign to days</h2><div class="box"><div class="muted" style="margin-bottom:6px">🍽️ Eating out (no crock pot dinner needed that night; a meal assigned to that day drops off the list and total):</div><div id="outdays" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px"></div><div id="days"></div></div></div>
 <h2>Eat-out tracker</h2><div class="box"><div class="budget"><div>Meals out this week<b id="eoW">0</b></div><div>Meals out this month<b id="eoM">0</b></div><div>Spent out this month<b id="eoS">$0.00</b></div></div>
 <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0"><input type="date" id="eoD" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px"><input id="eoP" placeholder="Place (optional)" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;flex:1;min-width:120px"><input id="eoA" type="number" step="0.01" min="0" placeholder="$ spent (optional)" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;width:150px"><button onclick="logOut()">Log meal out</button><button class="alt" onclick="undoOut()">Undo last</button></div><div id="eoH" class="muted"></div></div>
-<h2>3. Budget</h2><div class="box"><div class="budget"><div>Weekly dinner budget<b>~$100</b></div><div>Estimated cost<b id="est">TBD</b></div><div>Items on list<b id="nitems">0</b></div></div>
+<h2>3. Budget</h2><div class="box"><div class="budget"><div>🍲 Dinner <span class="muted">/ $100</span><b id="estD">$0.00</b></div><div>🥣 Breakfast<b id="estB">$0.00</b></div><div>🥪 Lunch<b id="estL">$0.00</b></div><div>Breakfast + lunch <span class="muted">/ $55</span><b id="estBL">$0.00</b></div><div>Combined <span class="muted">/ $155</span><b id="est">$0.00</b></div><div>Items on list<b id="nitems">0</b></div></div>
 <p class="muted" id="bnote">Pick meals to see an estimate.</p></div>
 <h2>4. Shopping list</h2><div class="box"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="alt" onclick="clearChecks()">Uncheck all</button></div>
 <p class="muted">🌱 <span class="carry">carries over</span> = used in 2+ of your meals — buy once, waste less.</p><div id="list"><p class="muted">Pick some meals to build your list.</p></div></div>
-<p class="muted" style="text-align:center;margin:24px 0">Saved automatically on this device.<br>Prices from Aldi Beaver Dam, Oct 2026; ~ = estimate</p>
+<p class="muted" style="text-align:center;margin:24px 0">Saved automatically on this device.<br>Prices from aldi.us (Beaver Dam store), Oct 2026; ~ = estimate; TBD = no verified price, not counted</p>
 </main>
 <script>
 // Ingredient: [key, display amount, category]
@@ -51,6 +59,29 @@ const M=[
 {id:"roast",n:"Crock Pot Pot Roast",t:20,tags:["Sunday dinner","Leftovers"],ing:[["chuck roast","2.5–3 lb","Meat"],["potatoes","2 lb","Produce"],["carrots","1 lb","Produce"],["onion","1","Produce"],["celery","2 stalks","Produce"],["beef broth","1 cup","Pantry"],["garlic","3 cloves","Produce"]],st:["Season roast with salt & pepper (sear if time).","Veggies in bottom, roast on top.","Add broth and garlic.","Cook LOW 8–9 h until it falls apart."]},
 {id:"curry",n:"Veggie Chickpea Curry",t:15,tags:["Meatless","Mild for kids"],ing:[["chickpeas","2 cans","Pantry"],["light coconut milk","1 can","Pantry"],["diced tomatoes","1 can","Pantry"],["sweet potatoes","1 large","Produce"],["onion","1","Produce"],["spinach","2 handfuls","Produce"],["curry powder","2 Tbsp","Spices"],["brown rice","1.5 cups dry","Pantry"],["garlic","2 cloves","Produce"]],st:["Add chickpeas, cubed sweet potato, onion, garlic, tomatoes, curry powder.","Pour coconut milk over; stir.","Cook LOW 6 h or HIGH 3 h.","Stir in spinach; serve over rice."]}
 ];
+// Breakfast/lunch: ing = [key, amount per day, category, fraction of one store pack used per day at 1x (family of 4)]
+const BM=[
+{id:"oats",n:"Overnight Oats",t:5,tags:["Make ahead","Fiber"],ing:[["oats","1½ cups",'Pantry',.15],["greek yogurt","1 cup",'Dairy',.25],["milk","1½ cups",'Dairy',.1],["bananas","2, sliced",'Produce',.7],["honey","drizzle",'Pantry',.03]],st:["Night before: mix oats, yogurt, milk in 4 jars.","Morning: top with banana and honey."]},
+{id:"scramble",n:"Egg & Veggie Scramble + Toast",t:10,tags:["High protein","Uses dinner veggies"],ing:[["eggs","8",'Dairy',.67],["spinach","2 handfuls",'Produce',.15],["bell peppers","1, diced",'Produce',.33],["shredded cheese","½ cup",'Dairy',.06],["whole-wheat bread","4 slices",'Pantry',.2]],st:["Sauté peppers 2 min, add spinach.","Add beaten eggs, stir until set; top with cheese.","Serve with toast."]},
+{id:"parfait",n:"Greek Yogurt Parfaits",t:5,tags:["No cook","Kids build their own"],ing:[["greek yogurt","2 cups",'Dairy',.5],["frozen berries","1½ cups, thawed",'Frozen',.3],["oats","½ cup (or granola)",'Pantry',.05],["honey","drizzle",'Pantry',.03]],st:["Thaw berries overnight in fridge.","Layer yogurt, berries, oats; drizzle honey."]},
+{id:"pbtoast",n:"Whole-Wheat PB Banana Toast",t:5,tags:["Kid favorite","Budget"],ing:[["whole-wheat bread","8 slices",'Pantry',.4],["peanut butter","¼ cup",'Pantry',.06],["bananas","2",'Produce',.7]],st:["Toast bread.","Spread PB, top with banana slices."]},
+{id:"eggmuffin",n:"Egg Muffins (batch-bake Sun)",t:5,tags:["Grab & go","Uses dinner veggies"],ing:[["eggs","6 (batch of 12 = 2 days)",'Dairy',.5],["spinach","handful",'Produce',.1],["bell peppers","½, diced",'Produce',.17],["onion","¼, diced",'Produce',.05],["shredded cheese","⅓ cup",'Dairy',.05]],st:["Sunday: whisk eggs, add veggies + cheese, fill muffin tin, bake 350°F 20 min.","Weekday: microwave 2 per person 30–45 sec."]},
+{id:"oatmeal",n:"Banana Oatmeal (microwave)",t:5,tags:["Warm","Budget"],ing:[["oats","2 cups",'Pantry',.18],["milk","3 cups",'Dairy',.19],["bananas","2, mashed",'Produce',.7],["peanut butter","1 Tbsp each (optional)",'Pantry',.03]],st:["Microwave oats + milk 2–3 min, stir.","Stir in mashed banana; top with PB."]},
+{id:"burrito",n:"Freezer Breakfast Burritos",t:5,tags:["Make ahead","Uses salsa & beans"],ing:[["eggs","8 (batch)",'Dairy',.67],["tortillas","4",'Pantry',.4],["black beans","½ can",'Pantry',.17],["salsa","½ cup",'Pantry',.15],["shredded cheese","½ cup",'Dairy',.06]],st:["Batch: scramble eggs, add beans; fill tortillas with eggs, cheese, salsa; wrap & freeze.","Morning: microwave 1–2 min."]},
+{id:"smoothie",n:"Banana Berry Spinach Smoothie",t:5,tags:["Sneaky greens","No cook"],ing:[["greek yogurt","1 cup",'Dairy',.25],["bananas","2",'Produce',.7],["frozen berries","1½ cups",'Frozen',.3],["spinach","1 handful",'Produce',.1],["milk","1½ cups",'Dairy',.1]],st:["Blend everything 60 sec.","Pair with a slice of PB toast for staying power."]}
+];
+const LM=[
+{id:"wrap",n:"Turkey & Hummus Wraps",t:5,tags:["No cook","Lunchbox"],ing:[["tortillas","4",'Pantry',.4],["deli turkey","8 oz",'Meat',.5],["hummus","½ cup",'Dairy',.4],["spinach","handful",'Produce',.15],["carrots","shredded / sticks",'Produce',.1]],st:["Spread hummus on tortilla, add turkey, spinach, carrots; roll."]},
+{id:"lchili",n:"Leftover Turkey Chili",t:5,tags:["Leftovers","Thermos"],needs:"chili",ing:[["leftover chili","from Turkey Chili dinner",'Leftover',0],["shredded cheese","¼ cup",'Dairy',.03]],st:["Make the chili dinner; portion extra into containers.","Reheat 2 min (or thermos); top with cheese."]},
+{id:"quesadilla",n:"Chicken Quesadillas (leftover salsa chicken)",t:10,tags:["Leftovers","Kid favorite"],needs:"salsa",ing:[["leftover salsa chicken","from Salsa Chicken dinner",'Leftover',0],["tortillas","4",'Pantry',.4],["shredded cheese","¾ cup",'Dairy',.09],["salsa","for dipping",'Pantry',.1]],st:["Fill tortillas with chicken + cheese, fold.","Skillet 2–3 min per side; cut in wedges."]},
+{id:"bento",n:"Bento Snack Boxes",t:10,tags:["No cook","Picky-eater friendly"],ing:[["eggs","4 hard-boiled",'Dairy',.33],["hummus","⅓ cup",'Dairy',.3],["carrots","sticks",'Produce',.15],["bell peppers","1, strips",'Produce',.33],["shredded cheese","or cubes",'Dairy',.05],["crackers","a handful each",'Pantry',.25],["apples","2, sliced",'Produce',.3]],st:["Boil eggs in a batch (10 min, once a week).","Fill boxes: protein, veggies + hummus, crackers, fruit."]},
+{id:"llentil",n:"Leftover Lentil Soup + Toast",t:5,tags:["Leftovers","Meatless"],needs:"lentil",ing:[["leftover lentil soup","from Lentil Soup dinner",'Leftover',0],["whole-wheat bread","4 slices",'Pantry',.2]],st:["Reheat soup 2–3 min.","Serve with toast for dipping."]},
+{id:"pbroll",n:"PB Banana Roll-Ups",t:5,tags:["No cook","Budget"],ing:[["tortillas","4",'Pantry',.4],["peanut butter","¼ cup",'Pantry',.06],["bananas","2",'Produce',.7]],st:["Spread PB on tortilla, add banana, roll and slice."]},
+{id:"ricebowl",n:"Bean & Rice Burrito Bowls",t:10,tags:["Uses dinner extras","Meatless"],ing:[["brown rice","1 cup cooked (extra from Tue)",'Pantry',.1],["black beans","1 can",'Pantry',.33],["frozen corn","1 cup",'Frozen',.25],["salsa","½ cup",'Pantry',.15],["shredded cheese","½ cup",'Dairy',.06]],st:["Microwave rice, beans, corn 2 min.","Top with salsa and cheese."]},
+{id:"eggsalad",n:"Greek-Yogurt Egg Salad Sandwiches",t:10,tags:["High protein"],ing:[["eggs","6 hard-boiled",'Dairy',.5],["greek yogurt","¼ cup (instead of mayo)",'Dairy',.06],["whole-wheat bread","8 slices",'Pantry',.4],["carrots","sticks on the side",'Produce',.1]],st:["Mash eggs with yogurt, salt, pepper.","Spread on bread; carrot sticks on side."]}
+];
+const TABN={d:"Dinner",b:"Breakfast",l:"Lunch"},TM={b:BM,l:LM};
+const SH=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const CATS=["Meat","Produce","Dairy","Frozen","Pantry","Spices","Leftover"];
 // [price, confirmed?] from week1-shopping-list.md (Aldi Beaver Dam, Oct 12 2026). 0 = assumed already at home. Missing = TBD.
@@ -61,7 +92,10 @@ const PRICES={
 "salsa":[2.59,1],"black beans":[2.85,1],"kidney or black beans":[0.95,0],"diced tomatoes":[2.90,0],"marinara sauce":[1.79,0],
 "whole-wheat pasta":[1.29,0],"brown rice":[1.79,0],"dry lentils":[1.49,0],"beef broth":[1.39,0],"vegetable broth":[1.39,0],"honey":[3.49,0],
 "frozen corn":[1.29,0],"frozen meatballs":[7.49,0],
-"cumin & chili powder":[0,1],"soy sauce (low sodium)":[0,1],"flour or cornstarch":[0,1]
+"cumin & chili powder":[0,1],
+// breakfast/lunch items: aldi.us product pages checked Oct 12 2026 (✓), ~ = third-party source
+"eggs":[1.85,1,"dozen"],"oats":[4.39,1,"42 oz"],"greek yogurt":[2.99,1,"32 oz nonfat"],"whole-wheat bread":[2.15,1,"20 oz loaf"],
+"peanut butter":[3.85,1,"40 oz"],"bananas":[0.49,1,"lb (~3 bananas)"],"hummus":[2.85,1,"10 oz"],"shredded cheese":[3.65,1,"16 oz"],"milk":[2.19,0,"gallon"],"soy sauce (low sodium)":[0,1],"flour or cornstarch":[0,1]
 };
 const fmtP=k=>{const p=PRICES[k];if(!p)return'<span title="No price yet">TBD</span>';if(p[0]===0)return"at home";return(p[1]?"":"~")+"$"+p[0].toFixed(2)};
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -69,15 +103,39 @@ function toggle(id){if(S.sel.includes(id)){setF('days/'+id,null);setF('sel/'+id,
 function renderMeals(){document.getElementById("meals").innerHTML=M.map(m=>{const s=S.sel.includes(m.id);return`<div class="box meal ${s?"sel":""}" onclick="toggle('${m.id}')"><span class="check">${s?"✓ Picked":"+ Pick"}</span><h3>${m.n}</h3><span class="tag g">⏱ ${m.t} min hands-on</span>${m.tags.map(t=>`<span class="tag">${t}</span>`).join("")}<ul>${m.ing.map(i=>`<li>${esc(i[0])} — <span class="muted">${esc(i[1])}</span></li>`).join("")}</ul><details onclick="event.stopPropagation()"><summary>Crock pot steps</summary><ol>${m.st.map(x=>`<li>${x}</li>`).join("")}</ol></details></div>`}).join("")}
 function renderDays(){document.getElementById("outdays").innerHTML=DAYS.map(d=>`<label style="font-size:.88rem"><input type="checkbox" ${S.out[d]?"checked":""} onchange="setOut('${d}',this.checked)"> ${d.slice(0,3)}</label>`).join("");const el=document.getElementById("days");if(!S.sel.length){el.innerHTML='<p class="muted">Pick meals first.</p>';return}
 el.innerHTML=S.sel.map(id=>{const m=M.find(x=>x.id==id);const off=S.days[id]&&S.out[S.days[id]];return`<div class="dayrow"><span>${m.n}${off?' <span class="carry" style="background:#f6dccd;color:#8a3b1c">eating out — skipped</span>':''}</span><select onchange="setF('days/${id}',this.value||null);renderDays();renderList()"><option value="">Day…</option>${DAYS.map(d=>`<option ${S.days[id]==d?"selected":""}>${d}</option>`).join("")}</select></div>`}).join("")}
-function renderList(){const map={};S.sel.filter(id=>!(S.days[id]&&S.out[S.days[id]])).forEach(id=>{const m=M.find(x=>x.id==id);m.ing.forEach(([k,a,c])=>{if(c=="Leftover")return;(map[k]=map[k]||{c,uses:[]}).uses.push({m:m.n,a})})});
-const keys=Object.keys(map);document.getElementById("nitems").textContent=keys.length;updBudget(keys);
-const el=document.getElementById("list");if(!keys.length){el.innerHTML='<p class="muted">Pick some meals to build your list.</p>';return}
-let h="";CATS.forEach(c=>{const ks=keys.filter(k=>map[k].c==c).sort();if(!ks.length)return;h+=`<div class="cat">${c}</div>`;
-ks.forEach(k=>{const u=map[k].uses,d=S.chk[k];h+=`<label class="item ${d?"done":""}"><input type="checkbox" ${d?"checked":""} onchange="setF('chk/'+decodeURIComponent('${encodeURIComponent(k)}'),this.checked||null);renderList()"><div><span class="nm">${esc(k)}</span>${u.length>1?`<span class="carry">🌱 carries over ×${u.length}</span>`:""}<div class="sub">${u.map(x=>`${esc(x.a)} (${esc(x.m)})`).join(" · ")}</div></div><span class="price">${fmtP(k)}</span></label>`})});el.innerHTML=h}
-function updBudget(keys){const est=document.getElementById("est"),n=document.getElementById("bnote");if(!keys.length){est.textContent="$0.00";n.textContent="Pick meals to see an estimate.";return}
-let t=0,anyEst=false;const tbd=[];keys.forEach(k=>{const p=PRICES[k];if(!p)tbd.push(k);else{t+=p[0];if(p[0]&&!p[1])anyEst=true}});
-est.textContent=(anyEst?"~":"")+"$"+t.toFixed(2);const d=100-t;
-n.innerHTML=`Sum of priced items for your picked meals: ${anyEst?"~":""}$${t.toFixed(2)} vs ~$100 budget (${d>=0?"$"+d.toFixed(2)+" under":"$"+(-d).toFixed(2)+" over"}).`+(tbd.length?` <b>${tbd.length} item${tbd.length>1?"s":""} still TBD, not included:</b> ${tbd.map(esc).join(", ")}.`:" All items priced.")+" Spices, soy sauce, and flour/cornstarch are assumed to be at home."}
+function blDays(t,id){const p=S[t+'plan'][id];return(!p||p=='most')?5:p.split(',').filter(Boolean).length}
+function blMul(t,id){const m=parseFloat(S[t+'mul'][id]);return m>0?m:1}
+function activeD(){return S.sel.filter(id=>!(S.days[id]&&S.out[S.days[id]]))}
+function buildList(){const map={},warn=[],ad=activeD();
+ ad.forEach(id=>{const m=M.find(x=>x.id==id);m.ing.forEach(([k,a,c])=>{if(c=="Leftover")return;const e=map[k]=map[k]||{c,uses:[],din:false,fr:{b:0,l:0}};e.din=true;e.uses.push({m:m.n,a,t:'d'})})});
+ ['b','l'].forEach(t=>S[t+'sel'].forEach(id=>{const m=TM[t].find(x=>x.id==id),n=blDays(t,id)*blMul(t,id);
+  if(m.needs&&!ad.includes(m.needs))warn.push(`${m.n} needs the <b>${esc(M.find(x=>x.id==m.needs).n)}</b> dinner (not picked / eating out) — pick it, or swap this lunch.`);
+  m.ing.forEach(([k,a,c,f])=>{if(c=="Leftover")return;const e=map[k]=map[k]||{c,uses:[],din:false,fr:{b:0,l:0}};e.fr[t]+=f*n;e.uses.push({m:m.n,a:`${a} × ${+n.toFixed(2)} day-servings`,t})})}));
+ for(const k in map){const e=map[k],bl=e.fr.b+e.fr.l;
+  // dinner pack's extra covers up to half a pack of breakfast/lunch use; beyond that buy whole extra packs
+  e.extra=bl<=0?0:e.din?Math.max(0,Math.ceil(bl-0.5-1e-9)):Math.ceil(bl-1e-9);e.packs=(e.din?1:0)+e.extra}
+ return{map,warn}}
+function renderList(){const{map,warn}=buildList();const keys=Object.keys(map);document.getElementById("nitems").textContent=keys.length;updBudget(map);
+ const el=document.getElementById("list");if(!keys.length){el.innerHTML='<p class="muted">Pick some meals to build your list.</p>';return}
+ let h=warn.map(w=>`<div class="warn">⚠️ ${w}</div>`).join("");CATS.forEach(c=>{const ks=keys.filter(k=>map[k].c==c).sort();if(!ks.length)return;h+=`<div class="cat">${c}</div>`;
+ ks.forEach(k=>{const e=map[k],u=e.uses,d=S.chk[k],p=PRICES[k],tabs=[...new Set(u.map(x=>x.t))];const q=p&&p[2]?`${e.packs} × ${p[2]}`:(e.packs>1?`${e.packs} packs`:"");
+ h+=`<label class="item ${d?"done":""}"><input type="checkbox" ${d?"checked":""} onchange="setF('chk/'+decodeURIComponent('${encodeURIComponent(k)}'),this.checked||null);renderList()"><div><span class="nm">${esc(k)}</span>${q?` <span class="muted">(${q})</span>`:""}${u.length>1?`<span class="carry">🌱 carries over ×${u.length}</span>`:""}${tabs.map(t=>`<span class="tabtag">${TABN[t]}</span>`).join("")}<div class="sub">${u.map(x=>`${esc(x.a)} (${esc(x.m)})`).join(" · ")}</div></div><span class="price">${fmtP(k)}${p&&p[0]&&e.packs>1?` ×${e.packs}`:""}</span></label>`})});el.innerHTML=h}
+function updBudget(map){const T={d:0,b:0,l:0},E={d:false,b:false,l:false},tbd=new Set();
+ for(const k in map){const e=map[k],p=PRICES[k];if(!p){tbd.add(k);continue}if(!p[0])continue;const x=!p[1];
+  if(e.din){T.d+=p[0];if(x)E.d=true}const bl=e.fr.b+e.fr.l;if(e.extra&&bl>0){['b','l'].forEach(t=>{if(e.fr[t]>0){T[t]+=p[0]*e.extra*e.fr[t]/bl;if(x)E[t]=true}})}}
+ const f=(v,x)=>(x?"~":"")+"$"+v.toFixed(2),bl=T.b+T.l,all=bl+T.d,ebl=E.b||E.l,ea=ebl||E.d;
+ estD.textContent=f(T.d,E.d);estB.textContent=f(T.b,E.b);estL.textContent=f(T.l,E.l);estBL.textContent=f(bl,ebl);est.textContent=f(all,ea);
+ const n=document.getElementById("bnote");if(!Object.keys(map).length){n.textContent="Pick meals to see an estimate.";return}
+ const ov=(v,b)=>v<=b?"$"+(b-v).toFixed(2)+" under":"$"+(v-b).toFixed(2)+" over";
+ n.innerHTML=`Dinner ${f(T.d,E.d)} vs ~$100 (${ov(T.d,100)}) · Breakfast+lunch ${f(bl,ebl)} vs ~$55 (${ov(bl,55)}) · Combined ${f(all,ea)} vs ~$155 (${ov(all,155)}). Shared items are bought once; breakfast/lunch only pay for extra packs beyond what dinner already buys.`+(tbd.size?` <b>${tbd.size} item${tbd.size>1?"s":""} still TBD, not included:</b> ${[...tbd].map(esc).join(", ")}.`:" All items priced.")+" Spices, soy sauce, and flour/cornstarch are assumed to be at home."}
+function blToggle(t,id){if(S[t+'sel'].includes(id)){['sel','plan','mul'].forEach(g=>setF(t+g+'/'+id,null))}else{setF(t+'sel/'+id,Date.now());setF(t+'plan/'+id,'most')}render()}
+function blPlan(t,id,d){const p=S[t+'plan'][id]||'most';let v;if(d=='most')v='most';else{let a=p=='most'?[]:p.split(',').filter(Boolean);a=a.includes(d)?a.filter(x=>x!=d):[...a,d];a.sort((x,y)=>SH.indexOf(x)-SH.indexOf(y));v=a.length?a.join(','):'most'}setF(t+'plan/'+id,v);render()}
+function blSetMul(t,id,v){setF(t+'mul/'+id,v=='1'?null:parseFloat(v));render()}
+function renderBL(t){document.getElementById(t+"meals").innerHTML=TM[t].map(m=>{const s=S[t+'sel'].includes(m.id),p=S[t+'plan'][m.id]||'most',mu=blMul(t,m.id),ds=p=='most'?[]:p.split(',');
+ const ctl=s?`<div class="ctl" onclick="event.stopPropagation()"><button class="chip ${p=='most'?'on':''}" onclick="blPlan('${t}','${m.id}','most')">Most days</button>${SH.map(d=>`<button class="chip ${ds.includes(d)?'on':''}" onclick="blPlan('${t}','${m.id}','${d}')">${d}</button>`).join("")}<label>Servings <select onchange="blSetMul('${t}','${m.id}',this.value)">${[0.5,1,1.5,2].map(v=>`<option value="${v}" ${v==mu?'selected':''}>${v}×</option>`).join("")}</select></label><span class="muted">${blDays(t,m.id)} day${blDays(t,m.id)>1?'s':''}</span></div>`:"";
+ const nd=m.needs?`<span class="tag" style="background:#fff3d6">needs ${esc(M.find(x=>x.id==m.needs).n)}</span>`:"";
+ return`<div class="box meal ${s?"sel":""}" onclick="blToggle('${t}','${m.id}')"><span class="check">${s?"✓ Picked":"+ Pick"}</span><h3>${m.n}</h3><span class="tag g">⏱ ${m.t} min</span>${nd}${m.tags.map(x=>`<span class="tag">${x}</span>`).join("")}<ul>${m.ing.map(i=>`<li>${esc(i[0])} — <span class="muted">${esc(i[1])}</span></li>`).join("")}</ul><details onclick="event.stopPropagation()"><summary>Steps</summary><ol>${m.st.map(x=>`<li>${x}</li>`).join("")}</ol></details>${ctl}</div>`}).join("")}
+let TAB=localStorage.getItem("cpTab")||"d";function setTab(t){TAB=t;localStorage.setItem("cpTab",t);document.querySelectorAll(".tabp").forEach(e=>e.style.display=e.id=="tab-"+t?"":"none");document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t==t))}
 function setOut(d,v){setF('out/'+d,v||null);renderDays();renderList()}
 const iso=x=>{const z=new Date(x.getTime()-x.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
 function renderEO(){const now=new Date(),ym=iso(now).slice(0,7),ws=new Date(now);ws.setHours(0,0,0,0);ws.setDate(ws.getDate()-ws.getDay());const we=new Date(ws);we.setDate(we.getDate()+7);
@@ -86,9 +144,9 @@ eoW.textContent=EO.filter(inW).length;eoM.textContent=mo.length;const sp=mo.filt
 const pl=Object.keys(S.out).length;eoH.innerHTML=(pl?`Planned out this week: ${pl} night${pl>1?"s":""} (${DAYS.filter(d=>S.out[d]).map(d=>d.slice(0,3)).join(", ")}). `:"")+(EO.length?"<b>History:</b><br>"+EO.slice().reverse().map(e=>`${e.d}${e.p?" · "+esc(e.p):""}${e.a!=null?" · $"+e.a.toFixed(2):""}`).join("<br>"):"No meals out logged yet.");if(!eoD.value)eoD.value=iso(now)}
 function logOut(){const d=eoD.value||iso(new Date()),p=eoP.value.trim(),a=parseFloat(eoA.value);setEO(uid(),{d,p:p||null,a:isNaN(a)?null:Math.round(a*100)/100,t:Date.now()});eoP.value="";eoA.value="";renderEO()}
 function undoOut(){const ids=Object.keys(R.eo).filter(k=>R.eo[k]&&!R.eo[k].del).sort((a,b)=>R.eo[a].t-R.eo[b].t);if(!ids.length)return;const k=ids[ids.length-1];setEO(k,{...R.eo[k],del:true,t:Date.now()});renderEO()}
-function render(){document.getElementById("cnt").textContent=S.sel.length+" / 7 dinners picked";renderMeals();renderDays();renderList();renderEO()}
+function render(){document.getElementById("cnt").textContent=`🍲 ${S.sel.length}/7 dinners · 🥣 ${S.bsel.length} breakfasts · 🥪 ${S.lsel.length} lunches`;setTab(TAB);renderMeals();renderBL("b");renderBL("l");renderDays();renderList();renderEO()}
 function clearChecks(){Object.keys(S.chk).forEach(k=>setF('chk/'+k,null));renderList()}
-function resetAll(){if(confirm("Clear this week's picks and list?")){['sel','days','chk','out'].forEach(g=>{const o=g=='sel'?Object.fromEntries(S.sel.map(x=>[x,1])):S[g];Object.keys(o).forEach(k=>setF(g+'/'+k,null))});render()}}
+function resetAll(){if(confirm("Clear this week's picks (all tabs), days and list? Eat-out history is kept.")){const f=R.w[WK]||{};Object.keys(f).forEach(k=>{if(f[k]&&f[k].v!=null)setF(ufk(k),null)});render()}}
 /* ================= SYNC CONFIG (edit me) =================
    Firebase Realtime Database URL from the Firebase console
    (Build > Realtime Database > Data tab, the URL at top).
@@ -112,10 +170,10 @@ if(!R){R={w:{},eo:{}};/* migrate old local data once */const o=JSON.parse(localS
  if(o){(o.sel||[]).forEach((id,i)=>f[fk("sel/"+id)]={v:i+1,t:t0});Object.entries(o.days||{}).forEach(([k,v])=>f[fk("days/"+k)]={v,t:t0});Object.entries(o.out||{}).forEach(([k,v])=>v&&(f[fk("out/"+k)]={v:true,t:t0}));Object.entries(o.chk||{}).forEach(([k,v])=>v&&(f[fk("chk/"+k)]={v:true,t:t0}))}
  R.w[wk]=f;JSON.parse(localStorage.getItem("cpEatOut")||"[]").forEach((e,i)=>R.eo["m"+i]={...e,t:t0+i});}
 let S,EO,WK;
-function derive(){WK=weekId();const f=(R.w&&R.w[WK])||{};S={sel:[],days:{},chk:{},out:{}};const sel=[];
+function derive(){WK=weekId();const f=(R.w&&R.w[WK])||{};S={sel:[],bsel:[],lsel:[],days:{},chk:{},out:{},bplan:{},bmul:{},lplan:{},lmul:{}};const sel={sel:[],bsel:[],lsel:[]};
  for(const[k,x]of Object.entries(f)){if(x==null||x.v==null||x.v===false||x.v==="")continue;const p=ufk(k),i=p.indexOf("/"),g=p.slice(0,i),n=p.slice(i+1);
-  if(g=="sel")sel.push([n,x.v]);else if(S[g])S[g][n]=x.v}
- S.sel=sel.sort((a,b)=>a[1]-b[1]).map(a=>a[0]).filter(id=>M.some(m=>m.id==id));
+  if(sel[g])sel[g].push([n,x.v]);else if(S[g])S[g][n]=x.v}
+ const LST={sel:M,bsel:BM,lsel:LM};for(const g in sel)S[g]=sel[g].sort((a,b)=>a[1]-b[1]).map(a=>a[0]).filter(id=>LST[g].some(m=>m.id==id));
  EO=Object.values(R.eo||{}).filter(e=>e&&!e.del).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.t-b.t)}
 function persist(){for(const w in R.w)if(w!=weekId())delete R.w[w]; /* weekly reset: drop old weeks (eo kept) */
  localStorage.setItem("cpSync",JSON.stringify(R))}
