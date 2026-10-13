@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crock Pot Dinner Planner</title>
+<style>
+:root{--bg:#fbf6ef;--card:#fff;--ink:#3b2f2a;--muted:#8a7a70;--acc:#c8643b;--acc2:#6b8f5e;--line:#eadfd3}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+header{background:linear-gradient(135deg,#c8643b,#e0954f);color:#fff;padding:20px 16px}header h1{margin:0;font-size:1.5rem}header p{margin:4px 0 0;opacity:.9;font-size:.9rem}
+main{max-width:900px;margin:auto;padding:12px}
+h2{font-size:1.15rem;margin:22px 4px 10px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0000000a}
+.grid{display:grid;gap:12px}@media(min-width:640px){.grid{grid-template-columns:1fr 1fr}}
+.meal{cursor:pointer;transition:.15s;position:relative}.meal.sel{border:2px solid var(--acc);background:#fff8f3}
+.meal h3{margin:0 0 4px;font-size:1.05rem;padding-right:70px}.tag{display:inline-block;font-size:.75rem;background:#f1e7dc;border-radius:99px;padding:2px 8px;margin:2px 4px 2px 0}
+.tag.g{background:#e3eedd;color:#3f6332}.check{position:absolute;top:12px;right:12px;font-size:.8rem;font-weight:600;color:var(--acc)}
+.meal ul,.meal ol{margin:6px 0;padding-left:20px;font-size:.88rem}.meal details{font-size:.88rem}summary{color:var(--acc);font-weight:600;cursor:pointer}
+select{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:#fff}
+.dayrow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:8px}.dayrow:last-child{border:0}
+.item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}.item input{width:20px;height:20px;margin-top:2px;accent-color:var(--acc2)}
+.item.done .nm{text-decoration:line-through;color:var(--muted)}.nm{font-weight:600}.sub{font-size:.8rem;color:var(--muted)}.carry{font-size:.72rem;background:#e3eedd;color:#3f6332;border-radius:99px;padding:1px 7px;margin-left:4px}
+.price{margin-left:auto;font-size:.8rem;color:var(--muted);white-space:nowrap}.cat{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--acc);margin:14px 0 2px}
+.budget{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}.budget div{flex:1;min-width:120px;background:#fbf1e7;border-radius:10px;padding:10px;text-align:center}.budget b{display:block;font-size:1.3rem}
+button{font:inherit;border:0;border-radius:10px;padding:8px 12px;background:var(--acc);color:#fff;cursor:pointer}button.alt{background:#efe4d8;color:var(--ink)}
+.count{position:sticky;box-shadow:0 2px 4px #0000000d;top:0;z-index:5;background:var(--bg);padding:8px 4px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.muted{color:var(--muted);font-size:.85rem}
+</style></head><body>
+<header><h1>🍲 Crock Pot Dinner Planner</h1><p>Family of 4 · Beaver Dam, WI · Aldi shopping · 15–20 min hands-on</p></header>
+<main>
+<div class="count"><span id="cnt">0 / 7 dinners picked</span><button class="alt" onclick="resetAll()">Reset week</button></div>
+<h2>1. Pick this week's dinners</h2><p class="muted">Tap a card to select (up to 7). Tap again to remove.</p>
+<div class="grid" id="meals"></div>
+<h2>2. Assign to days</h2><div class="box"><div class="muted" style="margin-bottom:6px">🍽️ Eating out (no crock pot dinner needed that night; a meal assigned to that day drops off the list and total):</div><div id="outdays" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px"></div><div id="days"></div></div>
+<h2>Eat-out tracker</h2><div class="box"><div class="budget"><div>Meals out this week<b id="eoW">0</b></div><div>Meals out this month<b id="eoM">0</b></div><div>Spent out this month<b id="eoS">$0.00</b></div></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0"><input type="date" id="eoD" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px"><input id="eoP" placeholder="Place (optional)" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;flex:1;min-width:120px"><input id="eoA" type="number" step="0.01" min="0" placeholder="$ spent (optional)" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;width:150px"><button onclick="logOut()">Log meal out</button><button class="alt" onclick="undoOut()">Undo last</button></div><div id="eoH" class="muted"></div></div>
+<h2>3. Budget</h2><div class="box"><div class="budget"><div>Weekly dinner budget<b>~$100</b></div><div>Estimated cost<b id="est">TBD</b></div><div>Items on list<b id="nitems">0</b></div></div>
+<p class="muted" id="bnote">Pick meals to see an estimate.</p></div>
+<h2>4. Shopping list</h2><div class="box"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="alt" onclick="clearChecks()">Uncheck all</button></div>
+<p class="muted">🌱 <span class="carry">carries over</span> = used in 2+ of your meals — buy once, waste less.</p><div id="list"><p class="muted">Pick some meals to build your list.</p></div></div>
+<p class="muted" style="text-align:center;margin:24px 0">Saved automatically on this device.<br>Prices from Aldi Beaver Dam, Oct 2026; ~ = estimate</p>
+</main>
+<script>
+// Ingredient: [key, display amount, category]
+const M=[
+{id:"salsa",n:"Salsa Chicken",t:15,tags:["High protein","Makes leftovers"],ing:[["chicken breast","2.5 lb (extra for taco bowls)","Meat"],["salsa","2 jars (16 oz)","Pantry"],["black beans","1 can","Pantry"],["frozen corn","1 bag (use half)","Frozen"],["cumin & chili powder","1 tsp each","Spices"]],st:["Place chicken in crock pot.","Top with salsa, drained beans, corn, spices.","Cook LOW 6–7 h or HIGH 3–4 h.","Shred with forks; save half for taco bowls."]},
+{id:"taco",n:"Chicken Taco Bowls over Rice",t:15,tags:["Uses leftovers","Low waste"],ing:[["leftover salsa chicken","from Salsa Chicken","Leftover"],["bell peppers","2","Produce"],["onion","1","Produce"],["cilantro","1 bunch","Produce"],["brown rice","2 cups dry","Pantry"],["frozen corn","rest of bag","Frozen"]],st:["Reheat leftover chicken in crock pot on WARM/LOW 1–2 h.","Cook rice (stovetop or rice cooker).","Sauté or quick-roast sliced peppers & onion.","Build bowls: rice, chicken, veggies, cilantro."]},
+{id:"chili",n:"Turkey & Sweet Potato Chili",t:20,tags:["Freezer friendly","Fiber"],ing:[["ground turkey","1.25 lb","Meat"],["kidney or black beans","2 cans","Pantry"],["diced tomatoes","2 cans (28 oz total)","Pantry"],["onion","1","Produce"],["bell peppers","1","Produce"],["sweet potatoes","2 medium","Produce"],["cumin & chili powder","1 Tbsp each","Spices"]],st:["Brown turkey with diced onion (or add raw, broken up).","Add cubed sweet potato, peppers, beans, tomatoes, spices.","Cook LOW 7–8 h or HIGH 4 h.","Stir, season, serve."]},
+{id:"pork",n:"Honey-Garlic Pork Loin, Carrots & Green Beans",t:15,tags:["Kid favorite"],ing:[["pork loin","2–2.5 lb","Meat"],["carrots","1 lb","Produce"],["green beans","1 lb fresh or frozen","Produce"],["honey","1/3 cup","Pantry"],["garlic","4 cloves","Produce"],["soy sauce (low sodium)","1/4 cup","Pantry"]],st:["Put carrots in bottom, pork on top.","Whisk honey, soy, minced garlic; pour over.","Cook LOW 6–7 h; add green beans last 45 min.","Slice pork, spoon sauce over."]},
+{id:"meatball",n:"Marinara Meatballs, Whole-Wheat Pasta & Spinach Salad",t:15,tags:["Kid favorite","Fast"],ing:[["frozen meatballs","1 bag (~2 lb)","Frozen"],["marinara sauce","2 jars (24 oz)","Pantry"],["whole-wheat pasta","1 lb","Pantry"],["spinach","1 bag (use half)","Produce"],["cherry tomatoes","1 pint (optional)","Produce"],["parmesan","small amount","Dairy"]],st:["Add frozen meatballs and marinara to crock pot.","Cook LOW 4–6 h or HIGH 2–3 h.","Boil pasta near dinnertime.","Toss spinach salad; serve meatballs over pasta."]},
+{id:"stew",n:"Beef & Veggie Stew",t:20,tags:["Comfort","Freezer friendly"],ing:[["beef stew meat","2 lb","Meat"],["carrots","1 lb","Produce"],["celery","3 stalks","Produce"],["potatoes","2 lb","Produce"],["onion","1","Produce"],["beef broth","32 oz","Pantry"],["tomato paste","2 Tbsp","Pantry"],["flour or cornstarch","2 Tbsp","Pantry"]],st:["Toss beef with flour, salt, pepper.","Add beef and chopped veggies to crock pot.","Whisk broth + tomato paste; pour over.","Cook LOW 8 h or HIGH 5 h."]},
+{id:"lentil",n:"Lentil Vegetable Soup",t:15,tags:["Meatless","Budget"],ing:[["dry lentils","1.5 cups","Pantry"],["carrots","3","Produce"],["celery","3 stalks","Produce"],["spinach","rest of bag","Produce"],["diced tomatoes","1 can","Pantry"],["onion","1","Produce"],["vegetable broth","32 oz","Pantry"],["garlic","2 cloves","Produce"]],st:["Rinse lentils.","Add lentils, chopped veggies, tomatoes, broth, garlic.","Cook LOW 7–8 h or HIGH 4 h.","Stir in spinach last 10 min."]},
+{id:"whitechili",n:"White Chicken Chili",t:15,tags:["High protein","Creamy"],ing:[["chicken breast","1.5 lb","Meat"],["great northern beans","2 cans","Pantry"],["chicken broth","32 oz","Pantry"],["green chiles","1 can (4 oz)","Pantry"],["onion","1","Produce"],["frozen corn","1 cup","Frozen"],["light cream cheese","4 oz","Dairy"],["cumin & chili powder","1 tsp each","Spices"]],st:["Add chicken, beans, broth, chiles, diced onion, corn, spices.","Cook LOW 6–7 h.","Shred chicken; stir in cream cheese until melted.","Top with cilantro if you have it."]},
+{id:"roast",n:"Crock Pot Pot Roast",t:20,tags:["Sunday dinner","Leftovers"],ing:[["chuck roast","2.5–3 lb","Meat"],["potatoes","2 lb","Produce"],["carrots","1 lb","Produce"],["onion","1","Produce"],["celery","2 stalks","Produce"],["beef broth","1 cup","Pantry"],["garlic","3 cloves","Produce"]],st:["Season roast with salt & pepper (sear if time).","Veggies in bottom, roast on top.","Add broth and garlic.","Cook LOW 8–9 h until it falls apart."]},
+{id:"curry",n:"Veggie Chickpea Curry",t:15,tags:["Meatless","Mild for kids"],ing:[["chickpeas","2 cans","Pantry"],["light coconut milk","1 can","Pantry"],["diced tomatoes","1 can","Pantry"],["sweet potatoes","1 large","Produce"],["onion","1","Produce"],["spinach","2 handfuls","Produce"],["curry powder","2 Tbsp","Spices"],["brown rice","1.5 cups dry","Pantry"],["garlic","2 cloves","Produce"]],st:["Add chickpeas, cubed sweet potato, onion, garlic, tomatoes, curry powder.","Pour coconut milk over; stir.","Cook LOW 6 h or HIGH 3 h.","Stir in spinach; serve over rice."]}
+];
+const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const CATS=["Meat","Produce","Dairy","Frozen","Pantry","Spices","Leftover"];
+// [price, confirmed?] from week1-shopping-list.md (Aldi Beaver Dam, Oct 12 2026). 0 = assumed already at home. Missing = TBD.
+const PRICES={
+"chicken breast":[9.20,1],"ground turkey":[4.89,1],"pork loin":[6.23,0],"beef stew meat":[11.54,1],
+"onion":[2.65,0],"bell peppers":[2.99,0],"cilantro":[0.89,0],"sweet potatoes":[2.75,1],"carrots":[2.15,1],"celery":[1.49,0],
+"green beans":[1.99,0],"potatoes":[4.09,1],"garlic":[1.29,0],"spinach":[4.18,0],
+"salsa":[2.59,1],"black beans":[2.85,1],"kidney or black beans":[0.95,0],"diced tomatoes":[2.90,0],"marinara sauce":[1.79,0],
+"whole-wheat pasta":[1.29,0],"brown rice":[1.79,0],"dry lentils":[1.49,0],"beef broth":[1.39,0],"vegetable broth":[1.39,0],"honey":[3.49,0],
+"frozen corn":[1.29,0],"frozen meatballs":[7.49,0],
+"cumin & chili powder":[0,1],"soy sauce (low sodium)":[0,1],"flour or cornstarch":[0,1]
+};
+const fmtP=k=>{const p=PRICES[k];if(!p)return'<span title="No price yet">TBD</span>';if(p[0]===0)return"at home";return(p[1]?"":"~")+"$"+p[0].toFixed(2)};
+let S=JSON.parse(localStorage.getItem("cpPlan")||"null")||{sel:[],days:{},chk:{}};S.out=S.out||{};
+let EO=JSON.parse(localStorage.getItem("cpEatOut")||"[]");
+const save=()=>localStorage.setItem("cpPlan",JSON.stringify(S));
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toggle(id){const i=S.sel.indexOf(id);if(i>=0){S.sel.splice(i,1);delete S.days[id]}else{if(S.sel.length>=7){alert("You can pick up to 7 dinners.");return}S.sel.push(id)}save();render()}
+function renderMeals(){document.getElementById("meals").innerHTML=M.map(m=>{const s=S.sel.includes(m.id);return`<div class="box meal ${s?"sel":""}" onclick="toggle('${m.id}')"><span class="check">${s?"✓ Picked":"+ Pick"}</span><h3>${m.n}</h3><span class="tag g">⏱ ${m.t} min hands-on</span>${m.tags.map(t=>`<span class="tag">${t}</span>`).join("")}<ul>${m.ing.map(i=>`<li>${esc(i[0])} — <span class="muted">${esc(i[1])}</span></li>`).join("")}</ul><details onclick="event.stopPropagation()"><summary>Crock pot steps</summary><ol>${m.st.map(x=>`<li>${x}</li>`).join("")}</ol></details></div>`}).join("")}
+function renderDays(){document.getElementById("outdays").innerHTML=DAYS.map(d=>`<label style="font-size:.88rem"><input type="checkbox" ${S.out[d]?"checked":""} onchange="setOut('${d}',this.checked)"> ${d.slice(0,3)}</label>`).join("");const el=document.getElementById("days");if(!S.sel.length){el.innerHTML='<p class="muted">Pick meals first.</p>';return}
+el.innerHTML=S.sel.map(id=>{const m=M.find(x=>x.id==id);const off=S.days[id]&&S.out[S.days[id]];return`<div class="dayrow"><span>${m.n}${off?' <span class="carry" style="background:#f6dccd;color:#8a3b1c">eating out — skipped</span>':''}</span><select onchange="S.days['${id}']=this.value;save();renderDays();renderList()"><option value="">Day…</option>${DAYS.map(d=>`<option ${S.days[id]==d?"selected":""}>${d}</option>`).join("")}</select></div>`}).join("")}
+function renderList(){const map={};S.sel.filter(id=>!(S.days[id]&&S.out[S.days[id]])).forEach(id=>{const m=M.find(x=>x.id==id);m.ing.forEach(([k,a,c])=>{if(c=="Leftover")return;(map[k]=map[k]||{c,uses:[]}).uses.push({m:m.n,a})})});
+const keys=Object.keys(map);document.getElementById("nitems").textContent=keys.length;updBudget(keys);
+const el=document.getElementById("list");if(!keys.length){el.innerHTML='<p class="muted">Pick some meals to build your list.</p>';return}
+let h="";CATS.forEach(c=>{const ks=keys.filter(k=>map[k].c==c).sort();if(!ks.length)return;h+=`<div class="cat">${c}</div>`;
+ks.forEach(k=>{const u=map[k].uses,d=S.chk[k];h+=`<label class="item ${d?"done":""}"><input type="checkbox" ${d?"checked":""} onchange="S.chk['${k}']=this.checked;save();renderList()"><div><span class="nm">${esc(k)}</span>${u.length>1?`<span class="carry">🌱 carries over ×${u.length}</span>`:""}<div class="sub">${u.map(x=>`${esc(x.a)} (${esc(x.m)})`).join(" · ")}</div></div><span class="price">${fmtP(k)}</span></label>`})});el.innerHTML=h}
+function updBudget(keys){const est=document.getElementById("est"),n=document.getElementById("bnote");if(!keys.length){est.textContent="$0.00";n.textContent="Pick meals to see an estimate.";return}
+let t=0,anyEst=false;const tbd=[];keys.forEach(k=>{const p=PRICES[k];if(!p)tbd.push(k);else{t+=p[0];if(p[0]&&!p[1])anyEst=true}});
+est.textContent=(anyEst?"~":"")+"$"+t.toFixed(2);const d=100-t;
+n.innerHTML=`Sum of priced items for your picked meals: ${anyEst?"~":""}$${t.toFixed(2)} vs ~$100 budget (${d>=0?"$"+d.toFixed(2)+" under":"$"+(-d).toFixed(2)+" over"}).`+(tbd.length?` <b>${tbd.length} item${tbd.length>1?"s":""} still TBD, not included:</b> ${tbd.map(esc).join(", ")}.`:" All items priced.")+" Spices, soy sauce, and flour/cornstarch are assumed to be at home."}
+function setOut(d,v){if(v)S.out[d]=true;else delete S.out[d];save();renderDays();renderList()}
+const iso=x=>{const z=new Date(x.getTime()-x.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
+function renderEO(){const now=new Date(),ym=iso(now).slice(0,7),ws=new Date(now);ws.setHours(0,0,0,0);ws.setDate(ws.getDate()-ws.getDay());const we=new Date(ws);we.setDate(we.getDate()+7);
+const inW=e=>{const d=new Date(e.d+"T12:00");return d>=ws&&d<we},mo=EO.filter(e=>e.d.slice(0,7)==ym);
+eoW.textContent=EO.filter(inW).length;eoM.textContent=mo.length;const sp=mo.filter(e=>e.a!=null);eoS.textContent=sp.length?"$"+sp.reduce((t,e)=>t+e.a,0).toFixed(2):"—";
+const pl=Object.keys(S.out).length;eoH.innerHTML=(pl?`Planned out this week: ${pl} night${pl>1?"s":""} (${DAYS.filter(d=>S.out[d]).map(d=>d.slice(0,3)).join(", ")}). `:"")+(EO.length?"<b>History:</b><br>"+EO.slice().reverse().map(e=>`${e.d}${e.p?" · "+esc(e.p):""}${e.a!=null?" · $"+e.a.toFixed(2):""}`).join("<br>"):"No meals out logged yet.");if(!eoD.value)eoD.value=iso(now)}
+function logOut(){const d=eoD.value||iso(new Date()),p=eoP.value.trim(),a=parseFloat(eoA.value);EO.push({d,p:p||null,a:isNaN(a)?null:Math.round(a*100)/100});localStorage.setItem("cpEatOut",JSON.stringify(EO));eoP.value="";eoA.value="";renderEO()}
+function undoOut(){if(!EO.length)return;EO.pop();localStorage.setItem("cpEatOut",JSON.stringify(EO));renderEO()}
+function render(){document.getElementById("cnt").textContent=S.sel.length+" / 7 dinners picked";renderMeals();renderDays();renderList();renderEO()}
+function clearChecks(){S.chk={};save();renderList()}
+function resetAll(){if(confirm("Clear this week's picks and list?")){S={sel:[],days:{},chk:{},out:{}};save();render()}}
+render();
+</script></body></html>
